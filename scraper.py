@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
 Maine 2026 Poll Tracker
-Covers: US Senate, Governor, CD-1, CD-2 — primaries and general election matchups.
-Hardcoded data reflects verified polls through April 2026; Wikipedia scraping supplements.
+Senate · Governor · CD-1 · CD-2 — primaries and general election matchups.
 """
 
 import json
@@ -17,220 +16,184 @@ from bs4 import BeautifulSoup
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; Maine Poll Tracker/1.0; +https://github.com/)",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.5",
 }
 TIMEOUT = 15
 
 # ---------------------------------------------------------------------------
-# Verified poll data (sourced from Emerson, UNH, Pan Atlantic, Punchbowl, RCP)
+# Poll data
+# Each section has:
+#   type: "primary" | "h2h"  (h2h = head-to-head general election matchup)
+#   key_candidates: used for the big avg display (and h2h spread calculation)
+#   polls: list of individual polls
 # ---------------------------------------------------------------------------
 
-POLL_DATA = {
+SECTIONS = [
     # ── US SENATE ────────────────────────────────────────────────────────────
-    "senate_dem_primary": {
-        "race": "US Senate",
-        "section": "Democratic Primary",
-        "note": "Primary: June 9, 2026",
+    {
+        "id": "senate-dem-primary",
+        "race": "senate",
+        "type": "primary",
+        "heading": "Democratic Primary",
+        "note": "Primary election: June 9, 2026",
+        "key_candidates": ["Graham Platner (D)", "Janet Mills (D)"],
         "polls": [
-            {
-                "date": "2026-04-07",
-                "pollster": "Maine Beacon / Aggregate",
-                "sample": None, "moe": None,
-                "candidates": {"Graham Platner (D)": 61, "Janet Mills (D)": 28, "Undecided": 11},
-            },
-            {
-                "date": "2026-03-21",
-                "pollster": "Emerson College",
-                "sample": None, "moe": None,
-                "candidates": {"Graham Platner (D)": 55, "Janet Mills (D)": 28, "Undecided": 13},
-            },
-            {
-                "date": "2026-02-16",
-                "pollster": "UNH Survey Center",
-                "sample": 462, "moe": None,
-                "candidates": {"Graham Platner (D)": 64, "Janet Mills (D)": 26, "Undecided": 10},
-            },
+            {"date": "2026-04-07", "pollster": "Maine Beacon / Aggregate",
+             "sample": None, "moe": None,
+             "candidates": {"Graham Platner (D)": 61, "Janet Mills (D)": 28, "Undecided": 11}},
+            {"date": "2026-03-21", "pollster": "Emerson College",
+             "sample": None, "moe": None,
+             "candidates": {"Graham Platner (D)": 55, "Janet Mills (D)": 28, "Undecided": 13}},
+            {"date": "2026-02-16", "pollster": "UNH Survey Center",
+             "sample": 462, "moe": None,
+             "candidates": {"Graham Platner (D)": 64, "Janet Mills (D)": 26, "Undecided": 10}},
         ],
     },
-    "senate_gen_platner": {
-        "race": "US Senate",
-        "section": "General Election: Collins vs. Platner",
-        "note": "RCP avg: Platner +7.6 (47.6% vs 40.0%)",
+    {
+        "id": "senate-gen-platner",
+        "race": "senate",
+        "type": "h2h",
+        "heading": "General Election: Collins vs. Platner",
+        "note": "RealClearPolling average: Platner +7.6 pts",
+        "key_candidates": ["Susan Collins (R)", "Graham Platner (D)"],
         "polls": [
-            {
-                "date": "2026-04-09",
-                "pollster": "Decision Desk HQ",
-                "sample": 157, "moe": None,
-                "candidates": {"Graham Platner (D)": 44, "Susan Collins (R)": 44, "Other/Undecided": 12},
-            },
-            {
-                "date": "2026-04-09",
-                "pollster": "Race to the WH",
-                "sample": 500, "moe": None,
-                "candidates": {"Graham Platner (D)": 48, "Susan Collins (R)": 41, "Other/Undecided": 11},
-            },
-            {
-                "date": "2026-03-21",
-                "pollster": "Emerson College",
-                "sample": None, "moe": None,
-                "candidates": {"Graham Platner (D)": 48, "Susan Collins (R)": 41, "Other/Undecided": 11},
-            },
-            {
-                "date": "2026-02-16",
-                "pollster": "UNH Survey Center",
-                "sample": 462, "moe": None,
-                "candidates": {"Graham Platner (D)": 49, "Susan Collins (R)": 38, "Other/Undecided": 13},
-            },
+            {"date": "2026-04-09", "pollster": "Decision Desk HQ",
+             "sample": 157, "moe": None,
+             "candidates": {"Susan Collins (R)": 44, "Graham Platner (D)": 44, "Other/Undecided": 12}},
+            {"date": "2026-04-09", "pollster": "Race to the WH",
+             "sample": 500, "moe": None,
+             "candidates": {"Susan Collins (R)": 41, "Graham Platner (D)": 48, "Other/Undecided": 11}},
+            {"date": "2026-03-21", "pollster": "Emerson College",
+             "sample": None, "moe": None,
+             "candidates": {"Susan Collins (R)": 41, "Graham Platner (D)": 48, "Other/Undecided": 11}},
+            {"date": "2026-02-16", "pollster": "UNH Survey Center",
+             "sample": 462, "moe": None,
+             "candidates": {"Susan Collins (R)": 38, "Graham Platner (D)": 49, "Other/Undecided": 13}},
         ],
+        "wiki_url": "https://en.wikipedia.org/wiki/2026_United_States_Senate_election_in_Maine",
+        "wiki_require": ["Susan Collins"],
+        "wiki_exclude": ["Janet Mills"],  # skip 3-way polls that include Mills
     },
-    "senate_gen_mills": {
-        "race": "US Senate",
-        "section": "General Election: Collins vs. Mills",
-        "note": "Alternate matchup if Mills wins primary",
+    {
+        "id": "senate-gen-mills",
+        "race": "senate",
+        "type": "h2h",
+        "heading": "General Election: Collins vs. Mills",
+        "note": "Alternate matchup if Mills wins the Democratic primary",
+        "key_candidates": ["Susan Collins (R)", "Janet Mills (D)"],
         "polls": [
-            {
-                "date": "2026-04-09",
-                "pollster": "270toWin Aggregate",
-                "sample": 138, "moe": None,
-                "candidates": {"Janet Mills (D)": 45, "Susan Collins (R)": 45, "Other/Undecided": 10},
-            },
-            {
-                "date": "2026-03-21",
-                "pollster": "Emerson College",
-                "sample": None, "moe": None,
-                "candidates": {"Janet Mills (D)": 46, "Susan Collins (R)": 43, "Other/Undecided": 11},
-            },
-            {
-                "date": "2026-02-16",
-                "pollster": "UNH Survey Center",
-                "sample": 462, "moe": None,
-                "candidates": {"Janet Mills (D)": 41, "Susan Collins (R)": 40, "Other/Undecided": 19},
-            },
+            {"date": "2026-04-09", "pollster": "270toWin Aggregate",
+             "sample": 138, "moe": None,
+             "candidates": {"Susan Collins (R)": 45, "Janet Mills (D)": 45, "Other/Undecided": 10}},
+            {"date": "2026-03-21", "pollster": "Emerson College",
+             "sample": None, "moe": None,
+             "candidates": {"Susan Collins (R)": 43, "Janet Mills (D)": 46, "Other/Undecided": 11}},
+            {"date": "2026-02-16", "pollster": "UNH Survey Center",
+             "sample": 462, "moe": None,
+             "candidates": {"Susan Collins (R)": 40, "Janet Mills (D)": 41, "Other/Undecided": 19}},
         ],
     },
     # ── GOVERNOR ─────────────────────────────────────────────────────────────
-    "gov_dem_primary": {
-        "race": "Governor",
-        "section": "Democratic Primary",
-        "note": "Primary: June 9, 2026. No general-election matchup polls yet.",
+    {
+        "id": "gov-dem-primary",
+        "race": "governor",
+        "type": "primary",
+        "heading": "Democratic Primary",
+        "note": "Primary election: June 9, 2026. No general-election matchup polls available yet.",
+        "key_candidates": ["Nirav Shah (D)", "Angus King III (D)", "Hannah Pingree (D)",
+                           "Shenna Bellows (D)", "Troy Jackson (D)"],
         "polls": [
-            {
-                "date": "2026-03-05",
-                "pollster": "Pan Atlantic Research",
-                "sample": None, "moe": None,
-                "candidates": {
-                    "Nirav Shah (D)": 24,
-                    "Angus King III (D)": 24,
-                    "Hannah Pingree (D)": 18,
-                    "Shenna Bellows (D)": 16,
-                    "Troy Jackson (D)": 10,
-                    "Undecided": 8,
-                },
-            },
-            {
-                "date": "2025-12-11",
-                "pollster": "Pan Atlantic Research",
-                "sample": None, "moe": None,
-                "candidates": {
-                    "Nirav Shah (D)": 24,
-                    "Angus King III (D)": 19,
-                    "Hannah Pingree (D)": 18,
-                    "Shenna Bellows (D)": 16,
-                    "Troy Jackson (D)": 8,
-                    "Undecided": 15,
-                },
-            },
+            {"date": "2026-03-05", "pollster": "Pan Atlantic Research",
+             "sample": None, "moe": None,
+             "candidates": {"Nirav Shah (D)": 24, "Angus King III (D)": 24,
+                            "Hannah Pingree (D)": 18, "Shenna Bellows (D)": 16,
+                            "Troy Jackson (D)": 10, "Undecided": 8}},
+            {"date": "2025-12-11", "pollster": "Pan Atlantic Research",
+             "sample": None, "moe": None,
+             "candidates": {"Nirav Shah (D)": 24, "Angus King III (D)": 19,
+                            "Hannah Pingree (D)": 18, "Shenna Bellows (D)": 16,
+                            "Troy Jackson (D)": 8, "Undecided": 15}},
         ],
     },
-    "gov_rep_primary": {
-        "race": "Governor",
-        "section": "Republican Primary",
-        "note": "Primary: June 9, 2026. 44% of R voters not yet familiar with all candidates.",
+    {
+        "id": "gov-rep-primary",
+        "race": "governor",
+        "type": "primary",
+        "heading": "Republican Primary",
+        "note": "Primary election: June 9, 2026. 44% of Republican voters say they're not yet familiar with all candidates.",
+        "key_candidates": ["Bobby Charles (R)", "Garrett Mason (R)", "Jim Libby (R)"],
         "polls": [
-            {
-                "date": "2026-03-05",
-                "pollster": "Pan Atlantic Research",
-                "sample": None, "moe": None,
-                "candidates": {
-                    "Bobby Charles (R)": 26,
-                    "Garrett Mason (R)": 11,
-                    "Jim Libby (R)": 8,
-                    "Undecided/Other": 55,
-                },
-            },
+            {"date": "2026-03-05", "pollster": "Pan Atlantic Research",
+             "sample": None, "moe": None,
+             "candidates": {"Bobby Charles (R)": 26, "Garrett Mason (R)": 11,
+                            "Jim Libby (R)": 8, "Undecided/Other": 55}},
+        ],
+    },
+    # ── CD-2 ─────────────────────────────────────────────────────────────────
+    {
+        "id": "cd2-dem-primary",
+        "race": "cd2",
+        "type": "primary",
+        "heading": "CD-2 Democratic Primary",
+        "note": "Open seat: Jared Golden (D) withdrew Nov. 2025. Primary: June 9, 2026.",
+        "key_candidates": ["Joe Baldacci (D)", "Matt Dunlap (D)", "Jordan Wood (D)"],
+        "polls": [
+            {"date": "2026-03-05", "pollster": "Pan Atlantic Research",
+             "sample": None, "moe": None,
+             "candidates": {"Joe Baldacci (D)": 36, "Matt Dunlap (D)": 14,
+                            "Jordan Wood (D)": 12, "Undecided": 38}},
+        ],
+    },
+    {
+        "id": "cd2-gen-baldacci",
+        "race": "cd2",
+        "type": "h2h",
+        "heading": "General Election: LePage vs. Baldacci",
+        "note": "Trump won CD-2 by 9 pts in 2024. Within margin of error.",
+        "key_candidates": ["Paul LePage (R)", "Joe Baldacci (D)"],
+        "polls": [
+            {"date": "2026-02-16", "pollster": "UNH Survey Center",
+             "sample": 462, "moe": 5.1,
+             "candidates": {"Paul LePage (R)": 48, "Joe Baldacci (D)": 47, "Other/Undecided": 5}},
+            {"date": "2026-02-01", "pollster": "Punchbowl News / Internal",
+             "sample": None, "moe": 5.1,
+             "candidates": {"Paul LePage (R)": 44, "Joe Baldacci (D)": 43, "Other/Undecided": 13}},
+        ],
+    },
+    {
+        "id": "cd2-gen-dunlap",
+        "race": "cd2",
+        "type": "h2h",
+        "heading": "General Election: LePage vs. Dunlap",
+        "note": "Alternate matchup if Dunlap wins the Democratic primary.",
+        "key_candidates": ["Paul LePage (R)", "Matt Dunlap (D)"],
+        "polls": [
+            {"date": "2026-02-16", "pollster": "UNH Survey Center",
+             "sample": 462, "moe": 5.1,
+             "candidates": {"Paul LePage (R)": 47, "Matt Dunlap (D)": 46, "Other/Undecided": 7}},
         ],
     },
     # ── CD-1 ─────────────────────────────────────────────────────────────────
-    "cd1_gen": {
-        "race": "CD-1 (House)",
-        "section": "General Election",
+    {
+        "id": "cd1-gen",
+        "race": "cd1",
+        "type": "incumbent",
+        "heading": "CD-1 General Election",
         "note": "Incumbent Chellie Pingree (D) won 58.1% in 2024. No public polling available yet.",
+        "key_candidates": [],
         "polls": [],
     },
-    # ── CD-2 ─────────────────────────────────────────────────────────────────
-    "cd2_dem_primary": {
-        "race": "CD-2 (House)",
-        "section": "Democratic Primary",
-        "note": "Primary: June 9, 2026. Open seat after Jared Golden withdrew Nov. 2025.",
-        "polls": [
-            {
-                "date": "2026-03-05",
-                "pollster": "Pan Atlantic Research",
-                "sample": None, "moe": None,
-                "candidates": {
-                    "Joe Baldacci (D)": 36,
-                    "Matt Dunlap (D)": 14,
-                    "Jordan Wood (D)": 12,
-                    "Undecided": 38,
-                },
-            },
-        ],
-    },
-    "cd2_gen_baldacci": {
-        "race": "CD-2 (House)",
-        "section": "General: LePage vs. Baldacci",
-        "note": "Trump won CD-2 53.5%–44.5% in 2024.",
-        "polls": [
-            {
-                "date": "2026-02-16",
-                "pollster": "UNH Survey Center",
-                "sample": 462, "moe": 5.1,
-                "candidates": {"Paul LePage (R)": 48, "Joe Baldacci (D)": 47, "Other/Undecided": 5},
-            },
-            {
-                "date": "2026-02-01",
-                "pollster": "Punchbowl News / Internal",
-                "sample": None, "moe": 5.1,
-                "candidates": {"Paul LePage (R)": 44, "Joe Baldacci (D)": 43, "Other/Undecided": 13},
-            },
-        ],
-    },
-    "cd2_gen_dunlap": {
-        "race": "CD-2 (House)",
-        "section": "General: LePage vs. Dunlap",
-        "note": "Alternate matchup if Dunlap wins primary.",
-        "polls": [
-            {
-                "date": "2026-02-16",
-                "pollster": "UNH Survey Center",
-                "sample": 462, "moe": 5.1,
-                "candidates": {"Paul LePage (R)": 47, "Matt Dunlap (D)": 46, "Other/Undecided": 7},
-            },
-        ],
-    },
+]
+
+RACE_META = {
+    "senate": {"label": "US Senate", "anchor": "senate"},
+    "governor": {"label": "Governor", "anchor": "governor"},
+    "cd2": {"label": "CD-2", "anchor": "cd2"},
+    "cd1": {"label": "CD-1", "anchor": "cd1"},
 }
 
 # ---------------------------------------------------------------------------
-# Wikipedia scraper (supplements hardcoded data for Senate general)
+# Wikipedia scraping (used to supplement senate-gen-platner)
 # ---------------------------------------------------------------------------
-
-WIKI_SOURCES = {
-    "senate_gen_platner": "https://en.wikipedia.org/wiki/2026_United_States_Senate_election_in_Maine",
-}
-
-SENATE_GEN_REPUBLICANS = ["Susan Collins"]
-SENATE_GEN_DEMOCRATS = ["Graham Platner", "Janet Mills"]
-
 
 def fetch_page(url: str) -> Optional[BeautifulSoup]:
     try:
@@ -238,27 +201,24 @@ def fetch_page(url: str) -> Optional[BeautifulSoup]:
         resp.raise_for_status()
         return BeautifulSoup(resp.text, "lxml")
     except Exception as exc:
-        print(f"  [warn] Could not fetch {url}: {exc}", file=sys.stderr)
+        print(f"  [warn] {url}: {exc}", file=sys.stderr)
         return None
 
 
 def clean_pct(text: str) -> Optional[float]:
-    text = text.strip().rstrip("%").strip()
     try:
-        v = float(text)
+        v = float(text.strip().rstrip("%").strip())
         return v if 1 <= v <= 99 else None
     except ValueError:
         return None
 
 
-def parse_wikipedia_polls(soup: BeautifulSoup, require_r_names: list[str]) -> list[dict]:
+def scrape_wiki_h2h(url: str, require: list[str], exclude: list[str]) -> list[dict]:
+    soup = fetch_page(url)
+    if not soup:
+        return []
     polls = []
     for table in soup.find_all("table", class_=re.compile(r"wikitable")):
-        headers = [th.get_text(separator=" ", strip=True) for th in table.find_all("th")]
-        header_text = " ".join(headers).lower()
-        if not any(k in header_text for k in ["poll", "date", "pollster"]):
-            continue
-
         col_headers: list[str] = []
         for row in table.find_all("tr")[:3]:
             ths = row.find_all("th")
@@ -266,6 +226,9 @@ def parse_wikipedia_polls(soup: BeautifulSoup, require_r_names: list[str]) -> li
                 col_headers = [th.get_text(separator=" ", strip=True) for th in ths]
                 break
         if not col_headers:
+            continue
+        header_text = " ".join(col_headers).lower()
+        if not any(k in header_text for k in ["poll", "date", "pollster"]):
             continue
 
         def find_col(patterns):
@@ -285,7 +248,7 @@ def parse_wikipedia_polls(soup: BeautifulSoup, require_r_names: list[str]) -> li
                 continue
             texts = [c.get_text(separator=" ", strip=True) for c in cells]
 
-            raw_date = texts[date_col] if date_col >= 0 and date_col < len(texts) else ""
+            raw_date = texts[date_col] if 0 <= date_col < len(texts) else ""
             date_str = ""
             m = re.search(r"(\w+ \d{1,2},?\s*\d{4})", raw_date)
             if m:
@@ -293,9 +256,11 @@ def parse_wikipedia_polls(soup: BeautifulSoup, require_r_names: list[str]) -> li
                     date_str = datetime.strptime(m.group(1).replace(",", ""), "%B %d %Y").strftime("%Y-%m-%d")
                 except ValueError:
                     pass
+            if not date_str:
+                continue
 
-            pollster = texts[pollster_col] if pollster_col >= 0 and pollster_col < len(texts) else "Unknown"
-            sample_raw = texts[sample_col] if sample_col >= 0 and sample_col < len(texts) else ""
+            pollster = texts[pollster_col].strip() if 0 <= pollster_col < len(texts) else "Unknown"
+            sample_raw = texts[sample_col] if 0 <= sample_col < len(texts) else ""
             sample_num = None
             sm = re.search(r"(\d[\d,]+)", sample_raw)
             if sm:
@@ -303,208 +268,306 @@ def parse_wikipedia_polls(soup: BeautifulSoup, require_r_names: list[str]) -> li
 
             cand_pcts: dict[str, float] = {}
             for i, (h, t) in enumerate(zip(col_headers, texts)):
-                if i == sample_col:
-                    continue
-                if re.search(r"(margin|error|moe)", h, re.I):
+                if i == sample_col or re.search(r"(margin|error|moe)", h, re.I):
                     continue
                 pct = clean_pct(t)
                 if pct is not None and h:
                     cand_pcts[h] = pct
 
-            if not date_str or len(cand_pcts) < 2:
+            if len(cand_pcts) < 2:
+                continue
+            keys_lower = " ".join(cand_pcts.keys()).lower()
+            if not all(r.lower() in keys_lower for r in require):
+                continue
+            if any(e.lower() in keys_lower for e in exclude):
                 continue
 
-            # Only keep polls that include at least one known Republican
-            cand_keys_lower = " ".join(cand_pcts.keys()).lower()
-            if not any(r.lower() in cand_keys_lower for r in require_r_names):
-                continue
-
-            polls.append({
-                "date": date_str,
-                "pollster": pollster.strip(),
-                "sample": sample_num,
-                "moe": None,
-                "candidates": cand_pcts,
-            })
-
+            polls.append({"date": date_str, "pollster": pollster,
+                          "sample": sample_num, "moe": None, "candidates": cand_pcts})
     return polls
 
 
-def try_supplement_from_wiki(key: str, existing_polls: list[dict]) -> list[dict]:
-    url = WIKI_SOURCES.get(key)
-    if not url:
-        return existing_polls
-
-    print(f"  Fetching Wikipedia for {key}...", file=sys.stderr)
-    soup = fetch_page(url)
-    if not soup:
-        return existing_polls
-
-    wiki_polls = parse_wikipedia_polls(soup, require_r_names=SENATE_GEN_REPUBLICANS)
-    if not wiki_polls:
-        return existing_polls
-
-    # Merge: add any Wikipedia poll not already in hardcoded data
-    existing_keys = {(p["date"], p["pollster"]) for p in existing_polls}
-    new = [p for p in wiki_polls if (p["date"], p["pollster"]) not in existing_keys]
-    if new:
-        print(f"  Added {len(new)} supplemental poll(s) from Wikipedia.", file=sys.stderr)
-    return sorted(existing_polls + new, key=lambda x: x["date"], reverse=True)
-
-
 # ---------------------------------------------------------------------------
-# Poll average
+# Averages — only over key_candidates
 # ---------------------------------------------------------------------------
 
-def compute_averages(polls: list[dict], days: int = 60) -> dict[str, float]:
+def compute_h2h_avgs(section: dict, days: int = 60) -> dict[str, float]:
+    polls = section["polls"]
+    key = section["key_candidates"]
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     weighted: list[tuple[float, dict]] = []
     for p in polls:
         try:
-            poll_date = datetime.strptime(p["date"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            d = datetime.strptime(p["date"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
         except ValueError:
             continue
-        if poll_date >= cutoff:
-            age = (datetime.now(timezone.utc) - poll_date).days
-            weight = max(days - age, 1)
-            weighted.append((weight, p["candidates"]))
-
+        if d >= cutoff:
+            age = (datetime.now(timezone.utc) - d).days
+            weighted.append((max(days - age, 1), p["candidates"]))
     if not weighted:
         weighted = [(1, p["candidates"]) for p in polls[:3]]
-
-    all_cands: set[str] = set()
-    for _, cands in weighted:
-        all_cands.update(cands.keys())
-
     total_w = sum(w for w, _ in weighted)
     avgs = {}
-    for cand in all_cands:
+    for cand in key:
         avgs[cand] = round(sum(w * c.get(cand, 0) for w, c in weighted) / total_w, 1)
+    return avgs
+
+
+def compute_primary_avgs(section: dict, days: int = 90) -> dict[str, float]:
+    polls = section["polls"]
+    key = set(section["key_candidates"])
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    weighted: list[tuple[float, dict]] = []
+    for p in polls:
+        try:
+            d = datetime.strptime(p["date"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+        age = (datetime.now(timezone.utc) - d).days
+        if d >= cutoff:
+            weighted.append((max(days - age, 1), p["candidates"]))
+    if not weighted:
+        weighted = [(1, p["candidates"]) for p in polls[:3]]
+    total_w = sum(w for w, _ in weighted)
+    all_cands = set()
+    for _, c in weighted:
+        all_cands.update(c.keys())
+    avgs = {}
+    for cand in all_cands:
+        if cand in key or not key:
+            avgs[cand] = round(sum(w * c.get(cand, 0) for w, c in weighted) / total_w, 1)
     return dict(sorted(avgs.items(), key=lambda x: x[1], reverse=True))
 
 
 # ---------------------------------------------------------------------------
-# HTML generation
+# HTML
 # ---------------------------------------------------------------------------
 
-def party_class(name: str) -> str:
+def pclass(name: str) -> str:
     n = name.lower()
     if "(r)" in n:
         return "rep"
     if "(d)" in n:
         return "dem"
-    if "undecided" in n or "unsure" in n or "other" in n:
-        return "und"
-    return "oth"
+    return "und"
 
 
-CHART_COLORS = {
-    "dem": {"border": "#3b82f6", "bg": "rgba(59,130,246,0.12)"},
-    "rep": {"border": "#ef4444", "bg": "rgba(239,68,68,0.12)"},
-    "und": {"border": "#9ca3af", "bg": "rgba(156,163,175,0.08)"},
-    "oth": {"border": "#8b5cf6", "bg": "rgba(139,92,246,0.12)"},
-}
+def pcolor(name: str) -> str:
+    c = pclass(name)
+    return {"rep": "#ef4444", "dem": "#3b82f6", "und": "#9ca3af"}[c]
 
 
-def build_section_html(key: str, data: dict) -> str:
-    polls = data["polls"]
-    avgs = compute_averages(polls) if polls else {}
-    note = data.get("note", "")
-    section_title = data["section"]
-    race = data["race"]
+def plabel(name: str) -> str:
+    n = name.lower()
+    if "(r)" in n:
+        return "Republican"
+    if "(d)" in n:
+        return "Democrat"
+    return ""
 
-    # Avg cards
-    avg_cards = ""
-    for name, pct in avgs.items():
-        css = party_class(name)
-        avg_cards += (
-            f'<div class="avg-card {css}">'
-            f'<div class="cand-name">{name}</div>'
-            f'<div class="cand-pct">{pct}%</div>'
-            f'<div class="cand-label">avg</div>'
-            f"</div>\n"
+
+def short_name(name: str) -> str:
+    return re.sub(r"\s*\([^)]+\)\s*$", "", name).strip()
+
+
+CHART_QUEUE: list[str] = []  # collects makeChart(...) calls; rendered once at page bottom
+
+
+def build_h2h_html(section: dict) -> str:
+    avgs = compute_h2h_avgs(section)
+    polls = section["polls"]
+    key = section["key_candidates"]
+    if len(key) < 2:
+        return ""
+    cand_a, cand_b = key[0], key[1]
+    avg_a = avgs.get(cand_a, 0)
+    avg_b = avgs.get(cand_b, 0)
+    spread = round(abs(avg_a - avg_b), 1)
+    leader = cand_a if avg_a >= avg_b else cand_b
+    leader_short = short_name(leader)
+    spread_txt = f"{leader_short} leads by {spread} pts" if spread > 0 else "Tied"
+
+    # head-to-head display
+    a_cls = pclass(cand_a)
+    b_cls = pclass(cand_b)
+    hth = f"""
+    <div class="hth-wrap">
+      <div class="hth-cand {a_cls} {'leader' if avg_a >= avg_b else ''}">
+        <div class="hth-name">{short_name(cand_a)}</div>
+        <div class="hth-party">{plabel(cand_a)}</div>
+        <div class="hth-pct">{avg_a}%</div>
+      </div>
+      <div class="hth-vs">vs</div>
+      <div class="hth-cand {b_cls} {'leader' if avg_b > avg_a else ''}">
+        <div class="hth-name">{short_name(cand_b)}</div>
+        <div class="hth-party">{plabel(cand_b)}</div>
+        <div class="hth-pct">{avg_b}%</div>
+      </div>
+    </div>
+    <p class="spread-line">{spread_txt} &mdash; polling average</p>"""
+
+    # trend chart
+    chart_id = section["id"]
+    chart_polls = list(reversed(polls))
+    labels = json.dumps([p["date"] for p in chart_polls])
+    datasets = []
+    for cand in key:
+        color = pcolor(cand)
+        vals = json.dumps([p["candidates"].get(cand) for p in chart_polls])
+        datasets.append(
+            f'{{"label":{json.dumps(short_name(cand))},"data":{vals},'
+            f'"borderColor":"{color}","backgroundColor":"{color}22",'
+            f'"pointBackgroundColor":"{color}","tension":0.35,"fill":false,"spanGaps":true}}'
         )
+    CHART_QUEUE.append(f'makeChart("c_{chart_id}",[{",".join(datasets)}],{labels});')
+    chart = f'<div class="chart-wrap"><canvas id="c_{chart_id}"></canvas></div>'
 
-    if not polls:
-        chart_html = ""
-        table_html = '<p class="no-data">No public polling available yet.</p>'
-    else:
-        # Chart
-        all_cands = list(avgs.keys())
-        chart_labels = json.dumps([p["date"] for p in reversed(polls)])
-        datasets = []
-        for i, cand in enumerate(all_cands):
-            if "undecided" in cand.lower() or "other" in cand.lower():
-                continue
-            css = party_class(cand)
-            c = CHART_COLORS.get(css, CHART_COLORS["oth"])
-            vals = json.dumps([p["candidates"].get(cand) for p in reversed(polls)])
-            datasets.append(
-                f'{{"label":{json.dumps(cand)},"data":{vals},'
-                f'"borderColor":"{c["border"]}","backgroundColor":"{c["bg"]}",'
-                f'"pointBackgroundColor":"{c["border"]}","tension":0.35,"fill":false,"spanGaps":true}}'
-            )
-        chart_id = re.sub(r"[^a-z0-9]", "_", key)
-        chart_html = (
-            f'<div class="chart-wrap"><canvas id="chart_{chart_id}"></canvas></div>\n'
-            f'<script>makeChart("chart_{chart_id}",[{",".join(datasets)}],{chart_labels});</script>'
-        )
+    # poll table
+    all_cands: list[str] = []
+    seen: set[str] = set()
+    for p in polls:
+        for c in p["candidates"]:
+            if c not in seen:
+                seen.add(c)
+                all_cands.append(c)
+    thead = "".join(f"<th>{h}</th>" for h in ["Date", "Pollster", "Sample", "MoE"] + all_cands)
+    tbody = ""
+    for p in polls:
+        row = (f"<td>{p['date']}</td><td>{p['pollster']}</td>"
+               f"<td>{p['sample'] or 'N/A'}</td>"
+               f"<td>{'±'+str(p['moe'])+'%' if p.get('moe') else 'N/A'}</td>")
+        for c in all_cands:
+            v = p["candidates"].get(c)
+            row += f"<td>{v}%</td>" if v is not None else "<td>—</td>"
+        tbody += f"<tr>{row}</tr>"
+    table = f'<div class="tbl-wrap"><table><thead><tr>{thead}</tr></thead><tbody>{tbody}</tbody></table></div>'
 
-        # Table
-        all_poll_cands: list[str] = []
-        seen: set[str] = set()
-        for p in polls:
-            for c in p["candidates"]:
-                if c not in seen:
-                    seen.add(c)
-                    all_poll_cands.append(c)
-        headers_html = "".join(f"<th>{h}</th>" for h in ["Date", "Pollster", "Sample", "MoE"] + all_poll_cands)
-        rows_html = ""
-        for p in polls:
-            cells = (
-                f"<td>{p['date']}</td>"
-                f"<td>{p['pollster']}</td>"
-                f"<td>{p['sample'] or 'N/A'}</td>"
-                f"<td>{'±' + str(p['moe']) + '%' if p.get('moe') else 'N/A'}</td>"
-            )
-            for c in all_poll_cands:
-                v = p["candidates"].get(c)
-                cells += f"<td>{v}%</td>" if v is not None else "<td>—</td>"
-            rows_html += f"<tr>{cells}</tr>\n"
-        table_html = (
-            f'<div class="poll-table-wrap"><table>'
-            f"<thead><tr>{headers_html}</tr></thead>"
-            f"<tbody>{rows_html}</tbody></table></div>"
-        )
-
-    note_html = f'<p class="race-note">{note}</p>' if note else ""
+    note_html = f'<p class="section-note">{section["note"]}</p>' if section.get("note") else ""
     return f"""
-  <section class="subsection">
-    <h3>{section_title}</h3>
-    {note_html}
-    <div class="avg-grid">{avg_cards}</div>
-    {chart_html}
-    {table_html}
-  </section>
-"""
+<div class="subsection" id="{section['id']}">
+  <div class="subsection-header">
+    <span class="subsection-badge general">General Election</span>
+    <h3>{section['heading']}</h3>
+  </div>
+  {note_html}
+  {hth}
+  {chart}
+  {table}
+</div>"""
 
 
-def generate_html(poll_data: dict, last_updated: str) -> str:
+def build_primary_html(section: dict) -> str:
+    avgs = compute_primary_avgs(section)
+    polls = section["polls"]
+    key = section["key_candidates"]
+
+    party_str = "Republican" if key and "(R)" in key[0] else "Democratic"
+    badge_cls = "rep-badge" if party_str == "Republican" else "dem-badge"
+
+    # Horizontal bar chart for each candidate
+    bars_html = ""
+    max_pct = max((v for k, v in avgs.items() if k in set(key)), default=1) or 1
+    for cand in key:
+        pct = avgs.get(cand, 0)
+        css = pclass(cand)
+        bar_w = round(pct / 75 * 100, 1)  # scale to 75% as "full"
+        bars_html += f"""
+      <div class="bar-row">
+        <div class="bar-name">{short_name(cand)}</div>
+        <div class="bar-track">
+          <div class="bar-fill {css}" style="width:{min(bar_w,100)}%"></div>
+        </div>
+        <div class="bar-pct">{pct}%</div>
+      </div>"""
+
+    # trend chart (only if 2+ candidates have data across 2+ polls)
+    chart_id = section["id"]
+    chart_polls = list(reversed(polls))
+    labels = json.dumps([p["date"] for p in chart_polls])
+    datasets = []
+    for cand in key:
+        color = pcolor(cand)
+        vals = json.dumps([p["candidates"].get(cand) for p in chart_polls])
+        datasets.append(
+            f'{{"label":{json.dumps(short_name(cand))},"data":{vals},'
+            f'"borderColor":"{color}","backgroundColor":"{color}22",'
+            f'"pointBackgroundColor":"{color}","tension":0.35,"fill":false,"spanGaps":true}}'
+        )
+    chart = ""
+    if len(polls) >= 2:
+        CHART_QUEUE.append(f'makeChart("c_{chart_id}",[{",".join(datasets)}],{labels});')
+        chart = f'<div class="chart-wrap"><canvas id="c_{chart_id}"></canvas></div>'
+
+    # poll table
+    all_cands: list[str] = []
+    seen: set[str] = set()
+    for p in polls:
+        for c in p["candidates"]:
+            if c not in seen:
+                seen.add(c)
+                all_cands.append(c)
+    thead = "".join(f"<th>{h}</th>" for h in ["Date", "Pollster", "Sample"] + all_cands)
+    tbody = ""
+    for p in polls:
+        row = f"<td>{p['date']}</td><td>{p['pollster']}</td><td>{p['sample'] or 'N/A'}</td>"
+        for c in all_cands:
+            v = p["candidates"].get(c)
+            row += f"<td>{v}%</td>" if v is not None else "<td>—</td>"
+        tbody += f"<tr>{row}</tr>"
+    table = f'<div class="tbl-wrap"><table><thead><tr>{thead}</tr></thead><tbody>{tbody}</tbody></table></div>'
+
+    note_html = f'<p class="section-note">{section["note"]}</p>' if section.get("note") else ""
+    return f"""
+<div class="subsection" id="{section['id']}">
+  <div class="subsection-header">
+    <span class="subsection-badge {badge_cls}">Primary</span>
+    <h3>{section['heading']}</h3>
+  </div>
+  {note_html}
+  <div class="bars-wrap">{bars_html}</div>
+  {chart}
+  {table}
+</div>"""
+
+
+def build_incumbent_html(section: dict) -> str:
+    note_html = f'<p class="section-note">{section["note"]}</p>' if section.get("note") else ""
+    return f"""
+<div class="subsection" id="{section['id']}">
+  <div class="subsection-header">
+    <span class="subsection-badge general">General Election</span>
+    <h3>{section['heading']}</h3>
+  </div>
+  {note_html}
+  <p class="no-polling">No public polling available — race not currently competitive.</p>
+</div>"""
+
+
+def generate_html(sections: list[dict], last_updated: str) -> str:
+    global CHART_QUEUE
+    CHART_QUEUE = []
+
     # Group sections by race
-    race_order = ["US Senate", "Governor", "CD-2 (House)", "CD-1 (House)"]
-    by_race: dict[str, list[tuple[str, dict]]] = {r: [] for r in race_order}
-    for key, data in poll_data.items():
-        race = data["race"]
-        if race in by_race:
-            by_race[race].append((key, data))
+    races = list(dict.fromkeys(s["race"] for s in sections))
 
-    race_html = ""
-    for race in race_order:
-        sections = by_race.get(race, [])
-        if not sections:
-            continue
-        inner = "".join(build_section_html(k, d) for k, d in sections)
-        race_html += f'<div class="race-card"><h2>{race}</h2>{inner}</div>\n'
+    nav_items = ""
+    for race in races:
+        meta = RACE_META[race]
+        nav_items += f'<a href="#{meta["anchor"]}" class="nav-item">{meta["label"]}</a>'
+
+    body_html = ""
+    for race in races:
+        meta = RACE_META[race]
+        race_sections = [s for s in sections if s["race"] == race]
+        inner = ""
+        for s in race_sections:
+            if s["type"] == "h2h":
+                inner += build_h2h_html(s)
+            elif s["type"] == "primary":
+                inner += build_primary_html(s)
+            elif s["type"] == "incumbent":
+                inner += build_incumbent_html(s)
+        body_html += f'<section class="race-block" id="{meta["anchor"]}"><h2>{meta["label"]}</h2>{inner}</section>\n'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -515,59 +578,109 @@ def generate_html(poll_data: dict, last_updated: str) -> str:
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <style>
     *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
-    body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f4f6f8;color:#222;line-height:1.5}}
-    header{{background:linear-gradient(135deg,#1a3a5c 0%,#2e6da4 100%);color:#fff;padding:2rem 1.5rem 1.5rem;text-align:center}}
-    header h1{{font-size:2rem;font-weight:700}}
-    header p{{margin-top:0.4rem;opacity:0.85;font-size:0.95rem}}
-    .badge{{display:inline-block;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:999px;padding:0.15rem 0.75rem;font-size:0.8rem;margin-top:0.6rem}}
-    main{{max-width:980px;margin:2rem auto;padding:0 1rem 3rem}}
-    .race-card{{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,0.08);padding:1.75rem;margin-bottom:2.5rem}}
-    .race-card h2{{font-size:1.4rem;font-weight:700;color:#1a3a5c;border-bottom:2px solid #e5e7eb;padding-bottom:0.6rem;margin-bottom:1.25rem}}
-    .subsection{{margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #f0f0f0}}
-    .subsection:last-child{{border-bottom:none;margin-bottom:0;padding-bottom:0}}
-    .subsection h3{{font-size:1.05rem;font-weight:600;color:#374151;margin-bottom:0.4rem}}
-    .race-note{{font-size:0.82rem;color:#6b7280;margin-bottom:0.9rem}}
-    .avg-grid{{display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem}}
-    .avg-card{{flex:1 1 130px;border-radius:8px;padding:0.8rem 0.9rem;text-align:center;border:2px solid transparent}}
-    .avg-card.dem{{background:#dbeafe;border-color:#3b82f6}}
-    .avg-card.rep{{background:#fee2e2;border-color:#ef4444}}
-    .avg-card.und,.avg-card.oth{{background:#f3f4f6;border-color:#d1d5db}}
-    .avg-card .cand-name{{font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em}}
-    .avg-card .cand-pct{{font-size:1.85rem;font-weight:700;line-height:1.1;margin-top:0.15rem}}
-    .avg-card .cand-label{{font-size:0.72rem;color:#555;margin-top:0.1rem}}
-    .chart-wrap{{position:relative;height:230px;margin-bottom:1.25rem}}
-    .poll-table-wrap{{overflow-x:auto}}
-    table{{width:100%;border-collapse:collapse;font-size:0.86rem}}
-    thead tr{{background:#1a3a5c;color:#fff}}
-    thead th{{padding:0.55rem 0.7rem;text-align:left;font-weight:600;white-space:nowrap}}
+    body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;line-height:1.55}}
+
+    /* Header */
+    header{{background:linear-gradient(135deg,#0f2744 0%,#1d4ed8 100%);color:#fff;padding:2rem 1.5rem 0}}
+    header h1{{font-size:1.9rem;font-weight:800;letter-spacing:-0.5px}}
+    header .subtitle{{opacity:0.8;font-size:0.92rem;margin-top:0.3rem}}
+    .updated{{font-size:0.78rem;opacity:0.6;margin-top:0.3rem}}
+
+    /* Race nav tabs */
+    .race-nav{{display:flex;gap:0;margin-top:1.2rem;overflow-x:auto}}
+    .nav-item{{padding:0.65rem 1.25rem;font-size:0.9rem;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;border-bottom:3px solid transparent;white-space:nowrap;transition:all 0.15s}}
+    .nav-item:hover{{color:#fff;border-bottom-color:rgba(255,255,255,0.5)}}
+
+    main{{max-width:900px;margin:0 auto;padding:1.5rem 1rem 3rem}}
+
+    /* Race block */
+    .race-block{{margin-bottom:2rem}}
+    .race-block h2{{font-size:1.3rem;font-weight:800;color:#0f2744;padding:0.9rem 1.25rem;background:#fff;border-radius:10px 10px 0 0;border-bottom:2px solid #e2e8f0;margin-bottom:0}}
+
+    /* Subsection */
+    .subsection{{background:#fff;border-radius:0;padding:1.5rem 1.25rem;border-bottom:1px solid #e2e8f0}}
+    .race-block .subsection:last-child{{border-radius:0 0 10px 10px;border-bottom:none}}
+    .race-block .subsection:first-of-type{{border-top:none}}
+    .subsection-header{{display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem}}
+    .subsection-header h3{{font-size:1rem;font-weight:700;color:#374151}}
+    .subsection-badge{{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.2rem 0.55rem;border-radius:999px}}
+    .general{{background:#dbeafe;color:#1d4ed8}}
+    .dem-badge{{background:#dbeafe;color:#1d4ed8}}
+    .rep-badge{{background:#fee2e2;color:#dc2626}}
+    .section-note{{font-size:0.8rem;color:#6b7280;margin-bottom:1rem}}
+
+    /* Head-to-head */
+    .hth-wrap{{display:flex;align-items:stretch;gap:0;margin-bottom:0.75rem;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb}}
+    .hth-cand{{flex:1;padding:1.1rem 1rem;text-align:center;background:#f9fafb;transition:background 0.2s}}
+    .hth-cand.dem{{background:#eff6ff}}
+    .hth-cand.rep{{background:#fff5f5}}
+    .hth-cand.leader.dem{{background:#dbeafe}}
+    .hth-cand.leader.rep{{background:#fee2e2}}
+    .hth-vs{{display:flex;align-items:center;padding:0 0.75rem;font-weight:700;font-size:0.8rem;color:#9ca3af;background:#f9fafb;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb}}
+    .hth-name{{font-size:1rem;font-weight:700;color:#111827}}
+    .hth-party{{font-size:0.75rem;color:#6b7280;margin:0.1rem 0 0.4rem}}
+    .hth-pct{{font-size:2.2rem;font-weight:800;line-height:1}}
+    .hth-cand.dem .hth-pct{{color:#1d4ed8}}
+    .hth-cand.rep .hth-pct{{color:#dc2626}}
+    .spread-line{{font-size:0.82rem;color:#6b7280;margin-bottom:1rem;text-align:center}}
+
+    /* Primary bars */
+    .bars-wrap{{margin-bottom:1rem}}
+    .bar-row{{display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem}}
+    .bar-name{{width:130px;font-size:0.85rem;font-weight:600;color:#374151;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+    .bar-track{{flex:1;background:#f3f4f6;border-radius:4px;height:22px;overflow:hidden}}
+    .bar-fill{{height:100%;border-radius:4px;transition:width 0.4s}}
+    .bar-fill.dem{{background:#3b82f6}}
+    .bar-fill.rep{{background:#ef4444}}
+    .bar-fill.und{{background:#9ca3af}}
+    .bar-pct{{width:42px;font-size:0.88rem;font-weight:700;color:#374151;text-align:right;flex-shrink:0}}
+
+    /* Chart */
+    .chart-wrap{{position:relative;height:200px;margin:1rem 0}}
+
+    /* Table */
+    .tbl-wrap{{overflow-x:auto;margin-top:1rem}}
+    table{{width:100%;border-collapse:collapse;font-size:0.82rem}}
+    thead tr{{background:#0f2744;color:#fff}}
+    thead th{{padding:0.5rem 0.65rem;text-align:left;font-weight:600;white-space:nowrap}}
     tbody tr:nth-child(even){{background:#f8fafc}}
-    tbody td{{padding:0.5rem 0.7rem;border-bottom:1px solid #e5e7eb}}
+    tbody td{{padding:0.45rem 0.65rem;border-bottom:1px solid #e5e7eb;white-space:nowrap}}
     tbody tr:last-child td{{border-bottom:none}}
-    .no-data{{font-size:0.88rem;color:#9ca3af;font-style:italic;padding:0.5rem 0}}
-    footer{{text-align:center;font-size:0.8rem;color:#888;padding-bottom:2rem}}
-    footer a{{color:#2e6da4;text-decoration:none}}
-    @media(max-width:600px){{header h1{{font-size:1.5rem}}.avg-card .cand-pct{{font-size:1.5rem}}}}
+
+    .no-polling{{color:#9ca3af;font-size:0.87rem;font-style:italic;padding:0.5rem 0}}
+
+    footer{{text-align:center;font-size:0.78rem;color:#9ca3af;padding-bottom:2rem}}
+    footer a{{color:#6b7280;text-decoration:none}}
+    footer a:hover{{color:#374151}}
+
+    @media(max-width:580px){{
+      header h1{{font-size:1.5rem}}
+      .hth-pct{{font-size:1.7rem}}
+      .hth-name{{font-size:0.9rem}}
+      .bar-name{{width:100px;font-size:0.78rem}}
+    }}
   </style>
 </head>
 <body>
 <header>
   <h1>Maine 2026 Poll Tracker</h1>
-  <p>Senate &bull; Governor &bull; CD-1 &bull; CD-2 &mdash; primaries &amp; general election matchups</p>
-  <div class="badge">Last updated: {last_updated}</div>
+  <p class="subtitle">Senate &bull; Governor &bull; CD-1 &bull; CD-2 &mdash; primaries &amp; general election</p>
+  <p class="updated">Updated {last_updated}</p>
+  <nav class="race-nav">{nav_items}</nav>
 </header>
+
 <main>
-{race_html}
+{body_html}
 </main>
+
 <footer>
-  <p>Sources: <a href="https://emersoncollegepolling.com" target="_blank">Emerson College</a> &bull;
-  <a href="https://scholars.unh.edu/survey_center_polls/" target="_blank">UNH Survey Center</a> &bull;
-  <a href="https://www.realclearpolling.com" target="_blank">RealClearPolling</a> &bull;
-  <a href="https://en.wikipedia.org/wiki/2026_United_States_Senate_election_in_Maine" target="_blank">Wikipedia</a></p>
-  <p style="margin-top:0.3rem"><a href="https://github.com/sloftus-lab/maine-poll-tracker" target="_blank">View on GitHub</a></p>
+  <p>Sources: Emerson College &bull; UNH Survey Center &bull; Pan Atlantic Research &bull; Punchbowl News &bull; RealClearPolling &bull; Wikipedia</p>
+  <p style="margin-top:0.3rem"><a href="https://github.com/sloftus-lab/maine-poll-tracker" target="_blank">View source on GitHub</a></p>
 </footer>
+
 <script>
-function makeChart(canvasId, datasets, labels) {{
-  const ctx = document.getElementById(canvasId);
+function makeChart(id, datasets, labels) {{
+  const ctx = document.getElementById(id);
   if (!ctx || !datasets.length) return;
   new Chart(ctx, {{
     type: 'line',
@@ -577,16 +690,17 @@ function makeChart(canvasId, datasets, labels) {{
       maintainAspectRatio: false,
       interaction: {{ mode: 'index', intersect: false }},
       plugins: {{
-        legend: {{ position: 'top' }},
+        legend: {{ position: 'top', labels: {{ boxWidth: 12, font: {{ size: 11 }} }} }},
         tooltip: {{ callbacks: {{ label: c => c.dataset.label + ': ' + c.parsed.y + '%' }} }},
       }},
       scales: {{
-        y: {{ min: 10, max: 75, ticks: {{ callback: v => v + '%' }}, grid: {{ color: 'rgba(0,0,0,0.05)' }} }},
-        x: {{ ticks: {{ maxRotation: 30, maxTicksLimit: 6 }}, grid: {{ display: false }} }},
+        y: {{ min: 10, max: 75, ticks: {{ callback: v => v + '%', font: {{ size: 11 }} }}, grid: {{ color: '#f0f0f0' }} }},
+        x: {{ ticks: {{ maxRotation: 30, maxTicksLimit: 6, font: {{ size: 11 }} }}, grid: {{ display: false }} }},
       }},
     }},
   }});
 }}
+{chr(10).join(CHART_QUEUE)}
 </script>
 </body>
 </html>"""
@@ -598,17 +712,21 @@ function makeChart(canvasId, datasets, labels) {{
 
 def main():
     print("Maine 2026 Poll Tracker — building...", file=sys.stderr)
+    sections = list(SECTIONS)
 
-    poll_data = dict(POLL_DATA)
-
-    # Try to supplement Senate general with live Wikipedia data
-    poll_data["senate_gen_platner"]["polls"] = try_supplement_from_wiki(
-        "senate_gen_platner", poll_data["senate_gen_platner"]["polls"]
-    )
+    # Supplement Collins vs Platner with Wikipedia (exclude 3-way Mills polls)
+    for s in sections:
+        if s.get("wiki_url"):
+            print(f"  Fetching Wikipedia for {s['id']}...", file=sys.stderr)
+            wiki_polls = scrape_wiki_h2h(s["wiki_url"], s.get("wiki_require", []), s.get("wiki_exclude", []))
+            existing_keys = {(p["date"], p["pollster"]) for p in s["polls"]}
+            new = [p for p in wiki_polls if (p["date"], p["pollster"]) not in existing_keys]
+            if new:
+                print(f"  Added {len(new)} poll(s) from Wikipedia.", file=sys.stderr)
+            s["polls"] = sorted(s["polls"] + new, key=lambda x: x["date"], reverse=True)
 
     last_updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
-    html = generate_html(poll_data, last_updated)
-
+    html = generate_html(sections, last_updated)
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
     print("Done — index.html written.", file=sys.stderr)
