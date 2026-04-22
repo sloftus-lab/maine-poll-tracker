@@ -3,114 +3,133 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Maine 2026 Poll Tracker</title>
+  <title>Maine 2026 Poll Tracker | Bangor Daily News</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;line-height:1.55}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f2f1ed;color:#111;line-height:1.55}
 
-    /* Header */
-    header{background:linear-gradient(135deg,#0f2744 0%,#1d4ed8 100%);color:#fff;padding:2rem 1.5rem 0}
-    header h1{font-size:1.9rem;font-weight:800;letter-spacing:-0.5px}
-    header .subtitle{opacity:0.8;font-size:0.92rem;margin-top:0.3rem}
-    .updated{font-size:0.78rem;opacity:0.6;margin-top:0.3rem}
+    /* ── BDN Top bar ── */
+    .bdn-topbar{background:#2d6535;padding:0.45rem 1.25rem;display:flex;align-items:center;gap:0.75rem}
+    .bdn-bug{display:inline-flex;align-items:center;justify-content:center;background:#fff;color:#2d6535;font-weight:900;font-size:0.85rem;letter-spacing:0.02em;width:34px;height:34px;flex-shrink:0}
+    .bdn-topbar-text{color:#fff;font-size:0.82rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase}
+    .bdn-topbar a{color:rgba(255,255,255,0.75);font-size:0.78rem;margin-left:auto;text-decoration:none}
+    .bdn-topbar a:hover{color:#fff}
 
-    /* Race nav tabs */
-    .race-nav{display:flex;gap:0;margin-top:1.2rem;overflow-x:auto}
-    .nav-item{padding:0.65rem 1.25rem;font-size:0.9rem;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;border-bottom:3px solid transparent;white-space:nowrap;transition:all 0.15s}
-    .nav-item:hover{color:#fff;border-bottom-color:rgba(255,255,255,0.5)}
+    /* ── Masthead ── */
+    .masthead{background:#fff;border-bottom:3px solid #2d6535;padding:1.1rem 1.25rem 0.9rem}
+    .masthead h1{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:900;letter-spacing:-0.5px;color:#111;line-height:1.1;text-transform:uppercase}
+    .masthead .kicker{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#2d6535;margin-bottom:0.35rem}
+    .masthead .meta{font-size:0.78rem;color:#666;margin-top:0.4rem}
 
-    main{max-width:900px;margin:0 auto;padding:1.5rem 1rem 3rem}
+    /* ── Race nav ── */
+    .race-nav{background:#2d6535;display:flex;overflow-x:auto;gap:0}
+    .nav-item{padding:0.6rem 1.2rem;font-size:0.82rem;font-weight:700;color:rgba(255,255,255,0.75);text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;border-bottom:3px solid transparent;transition:all 0.15s}
+    .nav-item:hover{color:#fff;background:rgba(255,255,255,0.1);border-bottom-color:#fff}
 
-    /* Race block */
-    .race-block{margin-bottom:2rem}
-    .race-block h2{font-size:1.3rem;font-weight:800;color:#0f2744;padding:0.9rem 1.25rem;background:#fff;border-radius:10px 10px 0 0;border-bottom:2px solid #e2e8f0;margin-bottom:0}
+    /* ── Layout ── */
+    main{max-width:900px;margin:1.5rem auto;padding:0 1rem 3rem}
 
-    /* Subsection */
-    .subsection{background:#fff;border-radius:0;padding:1.5rem 1.25rem;border-bottom:1px solid #e2e8f0}
-    .race-block .subsection:last-child{border-radius:0 0 10px 10px;border-bottom:none}
-    .race-block .subsection:first-of-type{border-top:none}
-    .subsection-header{display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem}
-    .subsection-header h3{font-size:1rem;font-weight:700;color:#374151}
-    .subsection-badge{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.2rem 0.55rem;border-radius:999px}
-    .general{background:#dbeafe;color:#1d4ed8}
-    .dem-badge{background:#dbeafe;color:#1d4ed8}
-    .rep-badge{background:#fee2e2;color:#dc2626}
-    .section-note{font-size:0.8rem;color:#6b7280;margin-bottom:1rem}
+    /* ── Race block ── */
+    .race-block{margin-bottom:2rem;border:1px solid #d8d7d2}
+    .race-block-header{background:#2d6535;padding:0.7rem 1.1rem;display:flex;align-items:baseline;gap:0.6rem}
+    .race-block-header h2{font-size:1rem;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.08em}
+    .race-block-header .race-date{font-size:0.72rem;color:rgba(255,255,255,0.7);margin-left:auto}
 
-    /* Head-to-head */
-    .hth-wrap{display:flex;align-items:stretch;gap:0;margin-bottom:0.75rem;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb}
-    .hth-cand{flex:1;padding:1.1rem 1rem;text-align:center;background:#f9fafb;transition:background 0.2s}
-    .hth-cand.dem{background:#eff6ff}
-    .hth-cand.rep{background:#fff5f5}
-    .hth-cand.leader.dem{background:#dbeafe}
-    .hth-cand.leader.rep{background:#fee2e2}
-    .hth-vs{display:flex;align-items:center;padding:0 0.75rem;font-weight:700;font-size:0.8rem;color:#9ca3af;background:#f9fafb;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb}
-    .hth-name{font-size:1rem;font-weight:700;color:#111827}
-    .hth-party{font-size:0.75rem;color:#6b7280;margin:0.1rem 0 0.4rem}
-    .hth-pct{font-size:2.2rem;font-weight:800;line-height:1}
-    .hth-cand.dem .hth-pct{color:#1d4ed8}
-    .hth-cand.rep .hth-pct{color:#dc2626}
-    .spread-line{font-size:0.82rem;color:#6b7280;margin-bottom:1rem;text-align:center}
+    /* ── Subsection ── */
+    .subsection{background:#fff;padding:1.25rem 1.1rem;border-top:1px solid #e5e3df}
+    .subsection:first-of-type{border-top:none}
+    .subsection-header{display:flex;align-items:center;gap:0.55rem;margin-bottom:0.4rem}
+    .subsection-header h3{font-size:0.95rem;font-weight:700;color:#111}
+    .subsection-badge{font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;padding:0.18rem 0.5rem;border:1px solid currentColor}
+    .general{color:#2d6535;border-color:#2d6535;background:#edf5ee}
+    .dem-badge{color:#1a56db;border-color:#1a56db;background:#eff3ff}
+    .rep-badge{color:#c81e1e;border-color:#c81e1e;background:#fdf2f2}
+    .section-note{font-size:0.77rem;color:#666;margin-bottom:0.9rem;line-height:1.4}
 
-    /* Primary bars */
+    /* ── Head-to-head ── */
+    .hth-wrap{display:flex;align-items:stretch;margin-bottom:0.6rem;border:1px solid #d8d7d2;overflow:hidden}
+    .hth-cand{flex:1;padding:1rem 0.9rem;text-align:center}
+    .hth-cand.dem{background:#f0f4ff}
+    .hth-cand.rep{background:#fff4f4}
+    .hth-cand.leader.dem{background:#dde8ff}
+    .hth-cand.leader.rep{background:#fddede}
+    .hth-vs{display:flex;align-items:center;padding:0 0.6rem;font-weight:800;font-size:0.75rem;color:#999;background:#f8f7f4;border-left:1px solid #d8d7d2;border-right:1px solid #d8d7d2}
+    .hth-name{font-size:0.95rem;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:0.02em}
+    .hth-party{font-size:0.72rem;color:#555;margin:0.15rem 0 0.5rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em}
+    .hth-pct{font-size:2.4rem;font-weight:900;line-height:1}
+    .hth-cand.dem .hth-pct{color:#1a56db}
+    .hth-cand.rep .hth-pct{color:#c81e1e}
+    .spread-line{font-size:0.78rem;color:#555;margin-bottom:1rem;text-align:center;font-style:italic}
+
+    /* ── Primary bars ── */
     .bars-wrap{margin-bottom:1rem}
-    .bar-row{display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem}
-    .bar-name{width:130px;font-size:0.85rem;font-weight:600;color:#374151;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .bar-track{flex:1;background:#f3f4f6;border-radius:4px;height:22px;overflow:hidden}
-    .bar-fill{height:100%;border-radius:4px;transition:width 0.4s}
-    .bar-fill.dem{background:#3b82f6}
-    .bar-fill.rep{background:#ef4444}
-    .bar-fill.und{background:#9ca3af}
-    .bar-pct{width:42px;font-size:0.88rem;font-weight:700;color:#374151;text-align:right;flex-shrink:0}
+    .bar-row{display:flex;align-items:center;gap:0.7rem;margin-bottom:0.55rem}
+    .bar-name{width:140px;font-size:0.82rem;font-weight:600;color:#222;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .bar-track{flex:1;background:#e8e7e3;height:20px;overflow:hidden}
+    .bar-fill{height:100%;transition:width 0.4s}
+    .bar-fill.dem{background:#1a56db}
+    .bar-fill.rep{background:#c81e1e}
+    .bar-fill.und{background:#888}
+    .bar-pct{width:42px;font-size:0.85rem;font-weight:700;color:#111;text-align:right;flex-shrink:0}
 
-    /* Chart */
-    .chart-wrap{position:relative;height:200px;margin:1rem 0}
+    /* ── Chart ── */
+    .chart-wrap{position:relative;height:195px;margin:0.9rem 0}
 
-    /* Table */
-    .tbl-wrap{overflow-x:auto;margin-top:1rem;border:1px solid #e2e8f0;border-radius:8px}
-    table{width:100%;border-collapse:collapse;font-size:0.82rem}
-    thead tr{background:#0f2744;color:#fff}
-    thead th{padding:0.55rem 0.8rem;text-align:left;font-weight:600;white-space:nowrap;border-right:1px solid rgba(255,255,255,0.1)}
+    /* ── Table ── */
+    .tbl-wrap{overflow-x:auto;margin-top:1rem;border:1px solid #d8d7d2}
+    table{width:100%;border-collapse:collapse;font-size:0.8rem}
+    thead tr{background:#2d6535;color:#fff}
+    thead th{padding:0.5rem 0.75rem;text-align:left;font-weight:700;white-space:nowrap;letter-spacing:0.03em;border-right:1px solid rgba(255,255,255,0.15)}
     thead th:last-child{border-right:none}
     thead .th-cand{text-align:center}
-    thead .th-dem{background:#1d4ed8}
-    thead .th-rep{background:#b91c1c}
+    thead .th-dem{background:#1a3d99}
+    thead .th-rep{background:#991b1b}
     thead .th-und{background:#4b5563}
-    tbody tr{border-bottom:1px solid #e5e7eb}
+    tbody tr{border-bottom:1px solid #e5e3df}
     tbody tr:last-child{border-bottom:none}
-    tbody tr:hover{background:#f8fafc}
-    tbody td{padding:0.5rem 0.8rem;white-space:nowrap;border-right:1px solid #f0f0f0}
+    tbody tr:hover{background:#faf9f6}
+    tbody td{padding:0.48rem 0.75rem;white-space:nowrap;border-right:1px solid #eeece8}
     tbody td:last-child{border-right:none}
-    .pct-cell{text-align:center;font-weight:600}
-    .pct-cell.dem{color:#1d4ed8;background:#eff6ff}
-    .pct-cell.rep{color:#b91c1c;background:#fff5f5}
-    .pct-cell.und{color:#6b7280;background:#f9fafb}
+    .pct-cell{text-align:center;font-weight:700}
+    .pct-cell.dem{color:#1a3d99;background:#eff3ff}
+    .pct-cell.rep{color:#991b1b;background:#fef2f2}
+    .pct-cell.und{color:#555;background:#f8f7f4}
 
-    .no-polling{color:#9ca3af;font-size:0.87rem;font-style:italic;padding:0.5rem 0}
+    .no-polling{color:#999;font-size:0.85rem;font-style:italic;padding:0.4rem 0}
 
-    footer{text-align:center;font-size:0.78rem;color:#9ca3af;padding-bottom:2rem}
-    footer a{color:#6b7280;text-decoration:none}
-    footer a:hover{color:#374151}
+    /* ── Footer ── */
+    footer{border-top:3px solid #2d6535;background:#fff;padding:1.25rem;text-align:center;font-size:0.76rem;color:#666;margin-top:0}
+    footer a{color:#2d6535;text-decoration:none;font-weight:600}
+    footer a:hover{text-decoration:underline}
+    .footer-bdn{font-weight:800;color:#111;font-size:0.82rem;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.05em}
 
     @media(max-width:580px){
-      header h1{font-size:1.5rem}
-      .hth-pct{font-size:1.7rem}
-      .hth-name{font-size:0.9rem}
-      .bar-name{width:100px;font-size:0.78rem}
+      .masthead h1{font-size:1.5rem}
+      .hth-pct{font-size:1.8rem}
+      .hth-name{font-size:0.85rem}
+      .bar-name{width:105px;font-size:0.76rem}
     }
   </style>
 </head>
 <body>
-<header>
+
+<div class="bdn-topbar">
+  <div class="bdn-bug">BDN</div>
+  <span class="bdn-topbar-text">Bangor Daily News</span>
+  <a href="https://www.bangordailynews.com/" target="_blank">bangordailynews.com &rarr;</a>
+</div>
+
+<div class="masthead">
+  <div class="kicker">Maine Politics &bull; Data</div>
   <h1>Maine 2026 Poll Tracker</h1>
-  <p class="subtitle">Senate &bull; Governor &bull; CD-1 &bull; CD-2 &mdash; primaries &amp; general election</p>
-  <p class="updated">Updated April 22, 2026 at 15:49 UTC</p>
-  <nav class="race-nav"><a href="#senate" class="nav-item">US Senate</a><a href="#governor" class="nav-item">Governor</a><a href="#cd2" class="nav-item">CD-2</a><a href="#cd1" class="nav-item">CD-1</a></nav>
-</header>
+  <p class="meta">Senate &bull; Governor &bull; CD-1 &bull; CD-2 &mdash; primaries &amp; general election matchups &bull; Updated April 22, 2026 at 16:33 UTC</p>
+</div>
+
+<nav class="race-nav"><a href="#senate" class="nav-item">US Senate</a><a href="#governor" class="nav-item">Governor</a><a href="#cd2" class="nav-item">CD-2</a><a href="#cd1" class="nav-item">CD-1</a></nav>
 
 <main>
-<section class="race-block" id="senate"><h2>US Senate</h2>
+<section class="race-block" id="senate"><div class="race-block-header"><h2>US Senate</h2><span class="race-date">Primary: Jun 9 &bull; General: Nov 3, 2026</span></div>
 <div class="subsection" id="senate-dem-primary">
   <div class="subsection-header">
     <span class="subsection-badge dem-badge">Primary</span>
@@ -183,7 +202,7 @@
   <div class="chart-wrap"><canvas id="c_senate-gen-mills"></canvas></div>
   <div class="tbl-wrap"><table><thead><tr><th class="th-meta">Date</th><th class="th-meta">Pollster</th><th class="th-meta">Sample</th><th class="th-meta">MoE</th><th class="th-cand th-rep">Susan Collins</th><th class="th-cand th-dem">Janet Mills</th><th class="th-cand th-und">Other/Undecided</th></tr></thead><tbody><tr><td>2026-04-09</td><td>270toWin Aggregate</td><td>—</td><td>Avg</td><td class="pct-cell rep">45%</td><td class="pct-cell dem">45%</td><td class="pct-cell und">10%</td></tr><tr><td>2026-03-21</td><td>Emerson College</td><td>1075</td><td>±2.9%</td><td class="pct-cell rep">43%</td><td class="pct-cell dem">46%</td><td class="pct-cell und">11%</td></tr><tr><td>2026-02-16</td><td>UNH Survey Center</td><td>462</td><td>±4.6%</td><td class="pct-cell rep">40%</td><td class="pct-cell dem">41%</td><td class="pct-cell und">19%</td></tr></tbody></table></div>
 </div></section>
-<section class="race-block" id="governor"><h2>Governor</h2>
+<section class="race-block" id="governor"><div class="race-block-header"><h2>Governor</h2><span class="race-date">Primary: Jun 9 &bull; General: Nov 3, 2026</span></div>
 <div class="subsection" id="gov-dem-primary">
   <div class="subsection-header">
     <span class="subsection-badge dem-badge">Primary</span>
@@ -260,7 +279,7 @@
   
   <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Pollster</th><th>Sample</th><th>MoE</th><th>Bobby Charles (R)</th><th>Garrett Mason (R)</th><th>Jim Libby (R)</th><th>Undecided/Other</th></tr></thead><tbody><tr><td>2026-03-05</td><td>Pan Atlantic Research</td><td>810</td><td>±3.7%</td><td class="pct-cell rep">26%</td><td class="pct-cell rep">11%</td><td class="pct-cell rep">8%</td><td class="pct-cell und">55%</td></tr></tbody></table></div>
 </div></section>
-<section class="race-block" id="cd2"><h2>CD-2</h2>
+<section class="race-block" id="cd2"><div class="race-block-header"><h2>CD-2</h2><span class="race-date">Primary: Jun 9 &bull; General: Nov 3, 2026</span></div>
 <div class="subsection" id="cd2-dem-primary">
   <div class="subsection-header">
     <span class="subsection-badge dem-badge">Primary</span>
@@ -340,7 +359,7 @@
   <div class="chart-wrap"><canvas id="c_cd2-gen-dunlap"></canvas></div>
   <div class="tbl-wrap"><table><thead><tr><th class="th-meta">Date</th><th class="th-meta">Pollster</th><th class="th-meta">Sample</th><th class="th-meta">MoE</th><th class="th-cand th-rep">Paul LePage</th><th class="th-cand th-dem">Matt Dunlap</th><th class="th-cand th-und">Other/Undecided</th></tr></thead><tbody><tr><td>2026-02-16</td><td>UNH Survey Center</td><td>462</td><td>±5.1%</td><td class="pct-cell rep">47%</td><td class="pct-cell dem">46%</td><td class="pct-cell und">7%</td></tr></tbody></table></div>
 </div></section>
-<section class="race-block" id="cd1"><h2>CD-1</h2>
+<section class="race-block" id="cd1"><div class="race-block-header"><h2>CD-1</h2><span class="race-date">Primary: Jun 9 &bull; General: Nov 3, 2026</span></div>
 <div class="subsection" id="cd1-gen">
   <div class="subsection-header">
     <span class="subsection-badge general">General Election</span>
@@ -353,11 +372,49 @@
 </main>
 
 <footer>
+  <p class="footer-bdn">Bangor Daily News</p>
   <p>Sources: Emerson College &bull; UNH Survey Center &bull; Pan Atlantic Research &bull; Punchbowl News &bull; RealClearPolling &bull; Wikipedia</p>
-  <p style="margin-top:0.3rem"><a href="https://github.com/sloftus-lab/maine-poll-tracker" target="_blank">View source on GitHub</a></p>
+  <p style="margin-top:0.4rem"><a href="https://github.com/sloftus-lab/maine-poll-tracker" target="_blank">View source on GitHub</a></p>
 </footer>
 
+<div id="pw-overlay" style="display:none;position:fixed;inset:0;background:#f2f1ed;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <div style="background:#fff;border:1px solid #d8d7d2;border-top:4px solid #2d6535;padding:2.5rem 2rem;width:100%;max-width:360px;text-align:center">
+    <div style="display:inline-flex;align-items:center;justify-content:center;background:#2d6535;color:#fff;font-weight:900;font-size:0.85rem;width:36px;height:36px;margin-bottom:1rem">BDN</div>
+    <h2 style="font-size:1rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#111;margin-bottom:0.3rem">Maine 2026 Poll Tracker</h2>
+    <p style="font-size:0.78rem;color:#666;margin-bottom:1.25rem">This page is password protected.</p>
+    <input id="pw-input" type="password" placeholder="Password" autofocus
+      style="width:100%;padding:0.6rem 0.75rem;border:1px solid #d8d7d2;font-size:0.9rem;margin-bottom:0.75rem;outline:none;font-family:inherit"
+      onkeydown="if(event.key==='Enter')checkPw()">
+    <button onclick="checkPw()"
+      style="width:100%;padding:0.6rem;background:#2d6535;color:#fff;border:none;font-size:0.85rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer">
+      Enter
+    </button>
+    <p id="pw-error" style="color:#c81e1e;font-size:0.78rem;margin-top:0.6rem;min-height:1em"></p>
+  </div>
+</div>
+
 <script>
+(function() {
+  const HASH = 'ad099e69988bc34a8453984aef9a6feebb92987352ecd3713529e6f2d087219a';
+  const KEY  = 'bdn_poll_auth';
+  if (sessionStorage.getItem(KEY) === HASH) {
+    document.getElementById('pw-overlay').style.display = 'none';
+  }
+  window.checkPw = async function() {
+    const val = document.getElementById('pw-input').value;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(val));
+    const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    if (hex === HASH) {
+      sessionStorage.setItem(KEY, HASH);
+      document.getElementById('pw-overlay').style.display = 'none';
+    } else {
+      document.getElementById('pw-error').textContent = 'Incorrect password.';
+      document.getElementById('pw-input').value = '';
+      document.getElementById('pw-input').focus();
+    }
+  };
+})();
+
 function makeChart(id, datasets, labels) {
   const ctx = document.getElementById(id);
   if (!ctx || !datasets.length) return;

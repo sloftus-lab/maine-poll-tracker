@@ -725,7 +725,44 @@ def generate_html(sections: list[dict], last_updated: str) -> str:
   <p style="margin-top:0.4rem"><a href="https://github.com/sloftus-lab/maine-poll-tracker" target="_blank">View source on GitHub</a></p>
 </footer>
 
+<div id="pw-overlay" style="display:none;position:fixed;inset:0;background:#f2f1ed;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <div style="background:#fff;border:1px solid #d8d7d2;border-top:4px solid #2d6535;padding:2.5rem 2rem;width:100%;max-width:360px;text-align:center">
+    <div style="display:inline-flex;align-items:center;justify-content:center;background:#2d6535;color:#fff;font-weight:900;font-size:0.85rem;width:36px;height:36px;margin-bottom:1rem">BDN</div>
+    <h2 style="font-size:1rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#111;margin-bottom:0.3rem">Maine 2026 Poll Tracker</h2>
+    <p style="font-size:0.78rem;color:#666;margin-bottom:1.25rem">This page is password protected.</p>
+    <input id="pw-input" type="password" placeholder="Password" autofocus
+      style="width:100%;padding:0.6rem 0.75rem;border:1px solid #d8d7d2;font-size:0.9rem;margin-bottom:0.75rem;outline:none;font-family:inherit"
+      onkeydown="if(event.key==='Enter')checkPw()">
+    <button onclick="checkPw()"
+      style="width:100%;padding:0.6rem;background:#2d6535;color:#fff;border:none;font-size:0.85rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer">
+      Enter
+    </button>
+    <p id="pw-error" style="color:#c81e1e;font-size:0.78rem;margin-top:0.6rem;min-height:1em"></p>
+  </div>
+</div>
+
 <script>
+(function() {{
+  const HASH = 'ad099e69988bc34a8453984aef9a6feebb92987352ecd3713529e6f2d087219a';
+  const KEY  = 'bdn_poll_auth';
+  if (sessionStorage.getItem(KEY) === HASH) {{
+    document.getElementById('pw-overlay').style.display = 'none';
+  }}
+  window.checkPw = async function() {{
+    const val = document.getElementById('pw-input').value;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(val));
+    const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    if (hex === HASH) {{
+      sessionStorage.setItem(KEY, HASH);
+      document.getElementById('pw-overlay').style.display = 'none';
+    }} else {{
+      document.getElementById('pw-error').textContent = 'Incorrect password.';
+      document.getElementById('pw-input').value = '';
+      document.getElementById('pw-input').focus();
+    }}
+  }};
+}})();
+
 function makeChart(id, datasets, labels) {{
   const ctx = document.getElementById(id);
   if (!ctx || !datasets.length) return;
