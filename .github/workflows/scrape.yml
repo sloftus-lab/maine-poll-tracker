@@ -35,13 +35,12 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add index.html
-          # Only commit if index.html actually changed
-          if git diff --cached --quiet; then
-            echo "No changes to index.html — nothing to commit."
-          else
-            git commit -m "chore: update poll data $(date -u +'%Y-%m-%d %H:%M UTC')"
-            git push
-          fi
+          # Always commit (touch last_run even if polls unchanged) so the repo
+          # stays active and GitHub never disables the scheduled workflow.
+          echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" > last_run.txt
+          git add last_run.txt
+          git commit -m "chore: update poll data $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
 
       - name: Send daily confirmation email
         env:
