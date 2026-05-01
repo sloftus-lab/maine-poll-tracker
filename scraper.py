@@ -590,32 +590,26 @@ def generate_html(sections: list[dict], last_updated: str) -> str:
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Maine 2026 Poll Tracker | Bangor Daily News</title>
+  <title>Maine 2026 Poll Tracker</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <style>
-    *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
-    body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f2f1ed;color:#111;line-height:1.55}}
+    .mpt *,.mpt *::before,.mpt *::after{{box-sizing:border-box}}
+    .mpt{{font-family:inherit;color:#111;line-height:1.55}}
+    .mpt p{{margin:0}}
 
-    /* ── BDN Top bar ── */
-    .bdn-topbar{{background:#2d6535;padding:0.45rem 1.25rem;display:flex;align-items:center;gap:0.75rem}}
-    .bdn-bug{{display:inline-flex;align-items:center;justify-content:center;background:#fff;color:#2d6535;font-weight:900;font-size:0.85rem;letter-spacing:0.02em;width:34px;height:34px;flex-shrink:0}}
-    .bdn-topbar-text{{color:#fff;font-size:0.82rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase}}
-    .bdn-topbar a{{color:rgba(255,255,255,0.75);font-size:0.78rem;margin-left:auto;text-decoration:none}}
-    .bdn-topbar a:hover{{color:#fff}}
-
-    /* ── Masthead ── */
-    .masthead{{background:#fff;border-bottom:3px solid #2d6535;padding:1.1rem 1.25rem 0.9rem}}
-    .masthead h1{{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:900;letter-spacing:-0.5px;color:#111;line-height:1.1;text-transform:uppercase}}
-    .masthead .kicker{{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#2d6535;margin-bottom:0.35rem}}
-    .masthead .meta{{font-size:0.78rem;color:#666;margin-top:0.4rem}}
+    /* ── Embed header ── */
+    .mpt-header{{padding:0 0 0.75rem;border-bottom:2px solid #2d6535;margin-bottom:1.25rem}}
+    .mpt-header .kicker{{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#2d6535;margin-bottom:0.25rem}}
+    .mpt-header h2{{font-size:clamp(1.2rem,3vw,1.6rem);font-weight:800;letter-spacing:-0.3px;color:#111;line-height:1.15;margin:0}}
+    .mpt-header .meta{{font-size:0.78rem;color:#666;margin-top:0.35rem}}
 
     /* ── Race nav ── */
-    .race-nav{{background:#2d6535;display:flex;overflow-x:auto;gap:0}}
+    .race-nav{{background:#2d6535;display:flex;overflow-x:auto;gap:0;margin-bottom:1.25rem}}
     .nav-item{{padding:0.6rem 1.2rem;font-size:0.82rem;font-weight:700;color:rgba(255,255,255,0.75);text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;border-bottom:3px solid transparent;transition:all 0.15s}}
     .nav-item:hover{{color:#fff;background:rgba(255,255,255,0.1);border-bottom-color:#fff}}
 
     /* ── Layout ── */
-    main{{max-width:900px;margin:1.5rem auto;padding:0 1rem 3rem}}
+    .mpt main{{max-width:900px;margin:0 auto}}
 
     /* ── Race block ── */
     .race-block{{margin-bottom:2rem;border:1px solid #d8d7d2}}
@@ -685,14 +679,13 @@ def generate_html(sections: list[dict], last_updated: str) -> str:
 
     .no-polling{{color:#999;font-size:0.85rem;font-style:italic;padding:0.4rem 0}}
 
-    /* ── Footer ── */
-    footer{{border-top:3px solid #2d6535;background:#fff;padding:1.25rem;text-align:center;font-size:0.76rem;color:#666;margin-top:0}}
-    footer a{{color:#2d6535;text-decoration:none;font-weight:600}}
-    footer a:hover{{text-decoration:underline}}
-    .footer-bdn{{font-weight:800;color:#111;font-size:0.82rem;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.05em}}
+    /* ── Sources ── */
+    .mpt-sources{{border-top:1px solid #d8d7d2;padding-top:0.75rem;margin-top:1.25rem;font-size:0.76rem;color:#666;line-height:1.45}}
+    .mpt-sources a{{color:#2d6535;text-decoration:none;font-weight:600}}
+    .mpt-sources a:hover{{text-decoration:underline}}
 
     @media(max-width:580px){{
-      .masthead h1{{font-size:1.5rem}}
+      .mpt-header h2{{font-size:1.25rem}}
       .hth-pct{{font-size:1.8rem}}
       .hth-name{{font-size:0.85rem}}
       .bar-name{{width:105px;font-size:0.76rem}}
@@ -701,17 +694,12 @@ def generate_html(sections: list[dict], last_updated: str) -> str:
 </head>
 <body>
 
-<div class="bdn-topbar">
-  <div class="bdn-bug">BDN</div>
-  <span class="bdn-topbar-text">Bangor Daily News</span>
-  <a href="https://www.bangordailynews.com/" target="_blank">bangordailynews.com &rarr;</a>
-</div>
-
-<div class="masthead">
+<div class="mpt">
+<header class="mpt-header">
   <div class="kicker">Maine Politics &bull; Data</div>
-  <h1>Maine 2026 Poll Tracker</h1>
+  <h2>Maine 2026 Poll Tracker</h2>
   <p class="meta">Senate &bull; Governor &bull; CD-1 &bull; CD-2 &mdash; primaries &amp; general election matchups &bull; Updated {last_updated}</p>
-</div>
+</header>
 
 <nav class="race-nav">{nav_items}</nav>
 
@@ -719,50 +707,10 @@ def generate_html(sections: list[dict], last_updated: str) -> str:
 {body_html}
 </main>
 
-<footer>
-  <p class="footer-bdn">Bangor Daily News</p>
-  <p>Sources: Emerson College &bull; UNH Survey Center &bull; Pan Atlantic Research &bull; Punchbowl News &bull; RealClearPolling &bull; Wikipedia</p>
-  <p style="margin-top:0.4rem"><a href="https://github.com/sloftus-lab/maine-poll-tracker" target="_blank">View source on GitHub</a></p>
-</footer>
-
-<div id="pw-overlay" style="display:none;position:fixed;inset:0;background:#f2f1ed;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
-  <div style="background:#fff;border:1px solid #d8d7d2;border-top:4px solid #2d6535;padding:2.5rem 2rem;width:100%;max-width:360px;text-align:center">
-    <div style="display:inline-flex;align-items:center;justify-content:center;background:#2d6535;color:#fff;font-weight:900;font-size:0.85rem;width:36px;height:36px;margin-bottom:1rem">BDN</div>
-    <h2 style="font-size:1rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#111;margin-bottom:0.3rem">Maine 2026 Poll Tracker</h2>
-    <p style="font-size:0.78rem;color:#666;margin-bottom:1.25rem">This page is password protected.</p>
-    <input id="pw-input" type="password" placeholder="Password" autofocus
-      style="width:100%;padding:0.6rem 0.75rem;border:1px solid #d8d7d2;font-size:0.9rem;margin-bottom:0.75rem;outline:none;font-family:inherit"
-      onkeydown="if(event.key==='Enter')checkPw()">
-    <button onclick="checkPw()"
-      style="width:100%;padding:0.6rem;background:#2d6535;color:#fff;border:none;font-size:0.85rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer">
-      Enter
-    </button>
-    <p id="pw-error" style="color:#c81e1e;font-size:0.78rem;margin-top:0.6rem;min-height:1em"></p>
-  </div>
+<p class="mpt-sources">Sources: Emerson College &bull; UNH Survey Center &bull; Pan Atlantic Research &bull; Punchbowl News &bull; RealClearPolling &bull; Wikipedia</p>
 </div>
 
 <script>
-(function() {{
-  const HASH = 'ad099e69988bc34a8453984aef9a6feebb92987352ecd3713529e6f2d087219a';
-  const KEY  = 'bdn_poll_auth';
-  if (sessionStorage.getItem(KEY) === HASH) {{
-    document.getElementById('pw-overlay').style.display = 'none';
-  }}
-  window.checkPw = async function() {{
-    const val = document.getElementById('pw-input').value;
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(val));
-    const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-    if (hex === HASH) {{
-      sessionStorage.setItem(KEY, HASH);
-      document.getElementById('pw-overlay').style.display = 'none';
-    }} else {{
-      document.getElementById('pw-error').textContent = 'Incorrect password.';
-      document.getElementById('pw-input').value = '';
-      document.getElementById('pw-input').focus();
-    }}
-  }};
-}})();
-
 function makeChart(id, datasets, labels) {{
   const ctx = document.getElementById(id);
   if (!ctx || !datasets.length) return;
